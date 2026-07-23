@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Referencias DOM
+    // Referencias DOM principales
     const sliderIds = ['h_min', 'h_max', 's_min', 's_max', 'v_min', 'v_max', 'min_area'];
     const toggleIds = ['draw_box', 'draw_centroid'];
     
@@ -21,10 +21,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const hudFps = document.getElementById('hud-fps');
     const hudRes = document.getElementById('hud-res');
 
+    // Botones de Modo
+    const btnModeHsv = document.getElementById('btn-mode-hsv');
+    const btnModeNn = document.getElementById('btn-mode-nn');
+
+    // Botones Red Neuronal
+    const btnNnSample = document.getElementById('btn-nn-sample');
+    const btnNnTrain = document.getElementById('btn-nn-train');
+    const btnNnReset = document.getElementById('btn-nn-reset');
+    
+    const nnStatusText = document.getElementById('nn-status-text');
+    const nnSampleCount = document.getElementById('nn-sample-count');
+    const nnAccuracy = document.getElementById('nn-accuracy');
+
     let currentSettings = {};
     let isTrackingActive = true;
     let isMaskView = false;
     let updateTimer = null;
+    let activeMode = 'hsv';
 
     // Preajustes de Color HSV
     const COLOR_PRESETS = {
@@ -34,35 +48,89 @@ document.addEventListener('DOMContentLoaded', () => {
         amarillo: { h_min: 20,  h_max: 35,  s_min: 100, s_max: 255, v_min: 100, v_max: 255 }
     };
 
-    // Cargar configuración inicial del backend
     fetchSettings();
-
-    // Iniciar bucle de actualización de telemetría (cada 200ms)
     setInterval(fetchStatus, 200);
 
-    // Registrar eventos para Sliders
+    // Selección de Modo (Filtro HSV vs Red Neuronal)
+    btnModeHsv.addEventListener('click', () => setTrackingMode('hsv'));
+    btnModeNn.addEventListener('click', () => setTrackingMode('neural_net'));
+
+    function setTrackingMode(mode) {
+        activeMode = mode;
+        btnModeHsv.classList.toggle('active', mode === 'hsv');
+        btnModeNn.classList.toggle('active', mode === 'neural_net');
+        currentSettings['tracking_mode'] = mode;
+        saveSettings();
+    }
+
+    // Acciones de Red Neuronal
+    btnNnSample.addEventListener('click', () => {
+        btnNnSample.textContent = '⏳ Capturando...';
+        fetch('/api/nn/sample', { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                btnNnSample.textContent = '📸 Capturar Muestra de Objeto';
+                if (data.nn_info) updateNNInfo(data.nn_info);
+            })
+            .catch(() => btnNnSample.textContent = '📸 Capturar Muestra de Objeto');
+    });
+
+    btnNnTrain.addEventListener('click', () => {
+        btnNnTrain.textContent = '🧠 Entrenando...';
+        fetch('/api/nn/train', { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                btnNnTrain.textContent = '🧠 Entrenar Red Neuronal';
+                if (data.status === 'success') {
+                    setTrackingMode('neural_net');
+                    if (data.nn_info) updateNNInfo(data.nn_info);
+                    alert(data.message);
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(() => btnNnTrain.textContent = '🧠 Entrenar Red Neuronal');
+    });
+
+    btnNnReset.addEventListener('click', () => {
+        if (confirm('¿Restablecer el entrenamiento de la Red Neuronal?')) {
+            fetch('/api/nn/reset', { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    setTrackingMode('hsv');
+                    if (data.nn_info) updateNNInfo(data.nn_info);
+                });
+        }
+    });
+
+    function updateNNInfo(info) {
+        if (!info) return;
+        nnSampleCount.textContent = `${info.sample_count} muestras (${info.total_vectors} vectores)`;
+        nnAccuracy.textContent = `${info.accuracy}%`;
+        
+        if (info.is_trained) {
+            nnStatusText.textContent = '¡Entrenada y Activa!';
+            nnStatusText.className = 'status-trained';
+        } else {
+            nnStatusText.textContent = 'No Entrenada';
+            nnStatusText.className = 'status-untrained';
+        }
+    }
+
+    // Registrar eventos Sliders
     sliderIds.forEach(id => {
         const slider = document.getElementById(id);
         const valSpan = document.getElementById(`val-${id}`);
-
         if (slider && valSpan) {
             slider.addEventListener('input', (e) => {
                 valSpan.textContent = e.target.value;
                 currentSettings[id] = parseInt(e.target.value);
-                
-                // Validación para evitar que H_Min > H_Max, etc.
-                if (id === 'h_min' && parseInt(slider.value) > currentSettings['h_max']) {
-                    document.getElementById('h_max').value = slider.value;
-                    document.getElementById('val-h_max').textContent = slider.value;
-                    currentSettings['h_max'] = parseInt(slider.value);
-                }
-                
                 debouncedSaveSettings();
             });
         }
     });
 
-    // Registrar eventos para Toggles
+    // Registrar eventos Toggles
     toggleIds.forEach(id => {
         const toggle = document.getElementById(id);
         if (toggle) {
@@ -73,7 +141,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Botón de alternar máscara HSV
     btnToggleMask.addEventListener('click', () => {
         isMaskView = !isMaskView;
         currentSettings['show_mask'] = isMaskView;
@@ -83,7 +150,6 @@ document.addEventListener('DOMContentLoaded', () => {
         saveSettings();
     });
 
-    // Botón de pausar/reanudar seguimiento
     btnToggleTracking.addEventListener('click', () => {
         fetch('/api/control', {
             method: 'POST',
@@ -101,7 +167,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Botón de Restablecer
     btnReset.addEventListener('click', () => {
         fetch('/api/control', {
             method: 'POST',
@@ -116,28 +181,24 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Preajustes de color
     document.querySelectorAll('.preset-chip').forEach(chip => {
         chip.addEventListener('click', () => {
             const presetName = chip.getAttribute('data-preset');
             if (COLOR_PRESETS[presetName]) {
-                const preset = COLOR_PRESETS[presetName];
-                Object.assign(currentSettings, preset);
+                Object.assign(currentSettings, COLOR_PRESETS[presetName]);
                 updateUIWithSettings(currentSettings);
                 saveSettings();
             }
         });
     });
 
-    // Funciones Auxiliares API
     function fetchSettings() {
         fetch('/api/settings')
             .then(res => res.json())
             .then(data => {
                 currentSettings = data;
                 updateUIWithSettings(data);
-            })
-            .catch(err => console.error("Error al obtener configuración:", err));
+            });
     }
 
     function updateUIWithSettings(settings) {
@@ -157,11 +218,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        if (settings.show_mask !== undefined) {
-            isMaskView = settings.show_mask;
-            maskBtnText.textContent = isMaskView ? 'Ver Cámara BGR' : 'Ver Máscara HSV';
-            btnToggleMask.classList.toggle('btn-primary', isMaskView);
-            btnToggleMask.classList.toggle('btn-outline', !isMaskView);
+        if (settings.tracking_mode) {
+            activeMode = settings.tracking_mode;
+            btnModeHsv.classList.toggle('active', activeMode === 'hsv');
+            btnModeNn.classList.toggle('active', activeMode === 'neural_net');
         }
     }
 
@@ -175,18 +235,16 @@ document.addEventListener('DOMContentLoaded', () => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(currentSettings)
-        }).catch(err => console.error("Error al guardar configuración:", err));
+        });
     }
 
     function fetchStatus() {
         fetch('/api/status')
             .then(res => res.json())
             .then(data => {
-                // Actualizar estado de conexión
                 connBadge.classList.add('online');
                 connText.textContent = 'En Línea';
 
-                // Modo de cámara (Simulación o Hardware)
                 if (data.simulation) {
                     modeBadge.style.display = 'flex';
                     modeText.textContent = 'Modo Simulación';
@@ -194,11 +252,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     modeText.textContent = 'Cámara Pi/USB';
                 }
 
-                // Actualizar métricas HUD
                 hudFps.textContent = `FPS: ${data.fps}`;
                 hudRes.textContent = `${data.frame_width}x${data.frame_height}`;
 
-                // Actualizar métricas del dashboard
                 if (data.detected) {
                     metricDetected.textContent = 'DETECTADO';
                     metricDetected.style.color = '#10b981';
@@ -209,7 +265,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 metricCoords.textContent = `[${data.target_x}, ${data.target_y}]`;
                 metricArea.textContent = data.target_area.toLocaleString();
-                metricBbox.textContent = `${data.bbox[2]} x ${data.bbox[3]} px`;
+
+                if (data.tracking_mode === 'neural_net') {
+                    metricBbox.textContent = `IA: ${data.nn_confidence}%`;
+                } else {
+                    metricBbox.textContent = `${data.bbox[2]} x ${data.bbox[3]} px`;
+                }
+
+                if (data.nn_info) {
+                    updateNNInfo(data.nn_info);
+                }
             })
             .catch(() => {
                 connBadge.classList.remove('online');

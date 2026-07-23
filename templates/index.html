@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Raspberry Pi - Seguimiento de Objetos en Tiempo Real</title>
+    <title>Raspberry Pi - Seguimiento de Objetos e IA en Tiempo Real</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -16,16 +16,14 @@
             <div class="brand">
                 <div class="brand-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"/>
-                        <line x1="22" y1="12" x2="18" y2="12"/>
-                        <line x1="6" y1="12" x2="2" y2="12"/>
-                        <line x1="12" y1="6" x2="12" y2="2"/>
-                        <line x1="12" y1="22" x2="12" y2="18"/>
+                        <path d="M12 2a10 10 0 1 0 10 10H12V2z"/>
+                        <path d="M12 12L2.5 7.5"/>
+                        <path d="m12 12 5 9"/>
                     </svg>
                 </div>
                 <div>
-                    <h1>Raspberry Tracker</h1>
-                    <p class="subtitle">Sistema de Seguimiento de Objetos en Tiempo Real</p>
+                    <h1>Raspberry Tracker AI</h1>
+                    <p class="subtitle">Seguimiento de Objetos con Red Neuronal & Filtrado HSV</p>
                 </div>
             </div>
             
@@ -39,6 +37,15 @@
                 </div>
             </div>
         </header>
+
+        <!-- Selector de Modo de Seguimiento -->
+        <div class="mode-selector-bar card">
+            <span class="mode-title">Algoritmo Activo:</span>
+            <div class="segmented-control">
+                <button class="segmented-btn active" id="btn-mode-hsv">Filtro de Color HSV</button>
+                <button class="segmented-btn" id="btn-mode-nn">Red Neuronal (IA)</button>
+            </div>
+        </div>
 
         <!-- Contenido Principal Grid -->
         <main class="dashboard-grid">
@@ -83,108 +90,145 @@
                         <span class="metric-value" id="metric-area">0</span>
                     </div>
                     <div class="metric-card">
-                        <span class="metric-label">Caja Delimitadora</span>
-                        <span class="metric-value" id="metric-bbox">0 x 0</span>
+                        <span class="metric-label">Confianza IA / BBox</span>
+                        <span class="metric-value" id="metric-bbox">0%</span>
                     </div>
                 </div>
             </section>
 
-            <!-- Panel Derecho: Ajustes y Calibración HSV -->
+            <!-- Panel Derecho: Ajustes HSV y Red Neuronal -->
             <section class="controls-section card">
-                <div class="card-header">
-                    <h2>Calibración de Color HSV</h2>
-                    <button class="btn btn-sm btn-icon" id="btn-reset" title="Restablecer valores">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                            <path d="M3 3v5h5"/>
-                        </svg>
-                    </button>
+                
+                <!-- SECCIÓN ENTRENAMIENTO DE RED NEURONAL -->
+                <div class="nn-panel" id="nn-controls-panel">
+                    <div class="card-header">
+                        <h2>🧠 Entrenamiento de Red Neuronal</h2>
+                    </div>
+
+                    <div class="nn-status-card">
+                        <div class="nn-info-row">
+                            <span>Estado Red:</span>
+                            <strong id="nn-status-text" class="status-untrained">No Entrenada</strong>
+                        </div>
+                        <div class="nn-info-row">
+                            <span>Muestras de Objeto:</span>
+                            <strong id="nn-sample-count">0 muestras</strong>
+                        </div>
+                        <div class="nn-info-row">
+                            <span>Precisión Estimada:</span>
+                            <strong id="nn-accuracy">0%</strong>
+                        </div>
+                    </div>
+
+                    <div class="nn-actions">
+                        <button class="btn btn-primary btn-full" id="btn-nn-sample">
+                            📸 Capturar Muestra de Objeto
+                        </button>
+                        <button class="btn btn-success btn-full" id="btn-nn-train">
+                            🧠 Entrenar Red Neuronal
+                        </button>
+                        <button class="btn btn-outline btn-full" id="btn-nn-reset">
+                            🗑️ Resetear Entrenamiento
+                        </button>
+                    </div>
+                    <p class="nn-help-text">Captura de 3 a 10 muestras del objeto que deseas seguir y presiona "Entrenar". La red neuronal aprenderá sus características en tiempo real.</p>
                 </div>
 
-                <!-- Presets Rápidos -->
-                <div class="presets-container">
-                    <span class="preset-label">Preajustes:</span>
-                    <button class="preset-chip" data-preset="verde">Verde</button>
-                    <button class="preset-chip" data-preset="azul">Azul</button>
-                    <button class="preset-chip" data-preset="rojo">Rojo</button>
-                    <button class="preset-chip" data-preset="amarillo">Amarillo</button>
-                </div>
+                <hr class="divider">
 
-                <!-- Sliders HSV -->
-                <div class="sliders-container">
-                    <!-- HUE -->
-                    <div class="slider-group">
-                        <div class="slider-header">
-                            <label for="h_min">Hue Mínimo (H-Min)</label>
-                            <span class="slider-value" id="val-h_min">35</span>
-                        </div>
-                        <input type="range" id="h_min" min="0" max="179" value="35" class="slider hue-slider">
+                <!-- SECCIÓN CALIBRACIÓN HSV -->
+                <div id="hsv-controls-panel">
+                    <div class="card-header">
+                        <h2>Calibración HSV (Color)</h2>
+                        <button class="btn btn-sm btn-icon" id="btn-reset" title="Restablecer valores">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                                <path d="M3 3v5h5"/>
+                            </svg>
+                        </button>
                     </div>
 
-                    <div class="slider-group">
-                        <div class="slider-header">
-                            <label for="h_max">Hue Máximo (H-Max)</label>
-                            <span class="slider-value" id="val-h_max">85</span>
-                        </div>
-                        <input type="range" id="h_max" min="0" max="179" value="85" class="slider hue-slider">
+                    <!-- Presets Rápidos -->
+                    <div class="presets-container">
+                        <span class="preset-label">Preajustes:</span>
+                        <button class="preset-chip" data-preset="verde">Verde</button>
+                        <button class="preset-chip" data-preset="azul">Azul</button>
+                        <button class="preset-chip" data-preset="rojo">Rojo</button>
+                        <button class="preset-chip" data-preset="amarillo">Amarillo</button>
                     </div>
 
-                    <!-- SATURATION -->
-                    <div class="slider-group">
-                        <div class="slider-header">
-                            <label for="s_min">Saturación Mínima (S-Min)</label>
-                            <span class="slider-value" id="val-s_min">80</span>
+                    <!-- Sliders HSV -->
+                    <div class="sliders-container">
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <label for="h_min">Hue Mínimo (H-Min)</label>
+                                <span class="slider-value" id="val-h_min">35</span>
+                            </div>
+                            <input type="range" id="h_min" min="0" max="179" value="35" class="slider hue-slider">
                         </div>
-                        <input type="range" id="s_min" min="0" max="255" value="80" class="slider sat-slider">
+
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <label for="h_max">Hue Máximo (H-Max)</label>
+                                <span class="slider-value" id="val-h_max">85</span>
+                            </div>
+                            <input type="range" id="h_max" min="0" max="179" value="85" class="slider hue-slider">
+                        </div>
+
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <label for="s_min">Saturación Mínima (S-Min)</label>
+                                <span class="slider-value" id="val-s_min">80</span>
+                            </div>
+                            <input type="range" id="s_min" min="0" max="255" value="80" class="slider sat-slider">
+                        </div>
+
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <label for="s_max">Saturación Máxima (S-Max)</label>
+                                <span class="slider-value" id="val-s_max">255</span>
+                            </div>
+                            <input type="range" id="s_max" min="0" max="255" value="255" class="slider sat-slider">
+                        </div>
+
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <label for="v_min">Brillo Mínimo (V-Min)</label>
+                                <span class="slider-value" id="val-v_min">80</span>
+                            </div>
+                            <input type="range" id="v_min" min="0" max="255" value="80" class="slider val-slider">
+                        </div>
+
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <label for="v_max">Brillo Máximo (V-Max)</label>
+                                <span class="slider-value" id="val-v_max">255</span>
+                            </div>
+                            <input type="range" id="v_max" min="0" max="255" value="255" class="slider val-slider">
+                        </div>
+
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <label for="min_area">Área Mínima del Objeto (px²)</label>
+                                <span class="slider-value" id="val-min_area">500</span>
+                            </div>
+                            <input type="range" id="min_area" min="100" max="10000" step="100" value="500" class="slider">
+                        </div>
                     </div>
 
-                    <div class="slider-group">
-                        <div class="slider-header">
-                            <label for="s_max">Saturación Máxima (S-Max)</label>
-                            <span class="slider-value" id="val-s_max">255</span>
-                        </div>
-                        <input type="range" id="s_max" min="0" max="255" value="255" class="slider sat-slider">
+                    <!-- Toggles -->
+                    <div class="toggles-container">
+                        <label class="toggle-control">
+                            <input type="checkbox" id="draw_box" checked>
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-text">Caja Delimitadora</span>
+                        </label>
+                        <label class="toggle-control">
+                            <input type="checkbox" id="draw_centroid" checked>
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-text">Centroide y Cruz</span>
+                        </label>
                     </div>
-
-                    <!-- VALUE / BRIGHTNESS -->
-                    <div class="slider-group">
-                        <div class="slider-header">
-                            <label for="v_min">Brillo Mínimo (V-Min)</label>
-                            <span class="slider-value" id="val-v_min">80</span>
-                        </div>
-                        <input type="range" id="v_min" min="0" max="255" value="80" class="slider val-slider">
-                    </div>
-
-                    <div class="slider-group">
-                        <div class="slider-header">
-                            <label for="v_max">Brillo Máximo (V-Max)</label>
-                            <span class="slider-value" id="val-v_max">255</span>
-                        </div>
-                        <input type="range" id="v_max" min="0" max="255" value="255" class="slider val-slider">
-                    </div>
-
-                    <!-- FILTRO DE ÁREA -->
-                    <div class="slider-group">
-                        <div class="slider-header">
-                            <label for="min_area">Área Mínima del Objeto (px²)</label>
-                            <span class="slider-value" id="val-min_area">500</span>
-                        </div>
-                        <input type="range" id="min_area" min="100" max="10000" step="100" value="500" class="slider">
-                    </div>
-                </div>
-
-                <!-- Toggles de Superposición Visual -->
-                <div class="toggles-container">
-                    <label class="toggle-control">
-                        <input type="checkbox" id="draw_box" checked>
-                        <span class="toggle-slider"></span>
-                        <span class="toggle-text">Caja Delimitadora</span>
-                    </label>
-                    <label class="toggle-control">
-                        <input type="checkbox" id="draw_centroid" checked>
-                        <span class="toggle-slider"></span>
-                        <span class="toggle-text">Centroide y Cruz</span>
-                    </label>
                 </div>
             </section>
         </main>
