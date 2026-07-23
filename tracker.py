@@ -58,19 +58,22 @@ class ObjectTracker:
 
     def _init_camera(self):
         try:
-            # 1. Intentar conectar al stream HTTP compartido (ej. http://127.0.0.1:5000/video_feed)
+            # 1. Intentar conectar al stream HTTP compartido (http://127.0.0.1:5000/video_feed)
             stream_url = "http://127.0.0.1:5000/video_feed"
             self.cap = cv2.VideoCapture(stream_url)
             
-            if self.cap.isOpened():
-                ret, frame = self.cap.read()
-                if ret and frame is not None:
-                    print(f"[INFO] Conectado con éxito al stream de cámara compartido en {stream_url}.")
-                    self.simulation_mode = False
-                    self.status["simulation"] = False
-                    return
-                else:
-                    self.cap.release()
+            for _ in range(5):
+                if self.cap.isOpened():
+                    ret, frame = self.cap.read()
+                    if ret and frame is not None:
+                        print(f"[INFO] Conectado con éxito al stream de cámara compartido en {stream_url}.")
+                        self.simulation_mode = False
+                        self.status["simulation"] = False
+                        return
+                time.sleep(0.3)
+            
+            if self.cap:
+                self.cap.release()
 
             # 2. Fallback: Probar abrir directamente el dispositivo V4L2 local (/dev/video0)
             self.cap = cv2.VideoCapture(self.camera_index, cv2.CAP_V4L2)
