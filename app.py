@@ -59,7 +59,7 @@ def handle_control():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Servidor de Seguimiento de Objetos Raspberry Pi")
     parser.add_argument('--host', type=str, default='0.0.0.0', help='Host IP (por defecto 0.0.0.0)')
-    parser.add_argument('--port', type=int, default=5000, help='Puerto web (por defecto 5000)')
+    parser.add_argument('--port', type=int, default=5050, help='Puerto web (por defecto 5050)')
     parser.add_argument('--cam', type=int, default=0, help='Índice de la cámara (por defecto 0)')
     args = parser.parse_args()
 

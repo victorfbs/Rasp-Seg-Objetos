@@ -4,7 +4,7 @@
 # ==============================================================================
 
 TARGET_HOST="192.168.1.75"
-TARGET_USER="${1:-victor}"
+TARGET_USER="${1:-amalia}"
 REMOTE_DIR="/home/${TARGET_USER}/Rasp-Seg-Objetos"
 
 echo "======================================================================"
@@ -32,15 +32,16 @@ ssh -o StrictHostKeyChecking=no "${TARGET_USER}@${TARGET_HOST}" << EOF
 EOF
 
 # 4. Iniciar o reiniciar el servidor web
-echo "[3/3] Iniciando el servicio en http://${TARGET_HOST}:5000 ..."
+echo "[3/3] Iniciando el servicio en http://${TARGET_HOST}:5050 ..."
 ssh -o StrictHostKeyChecking=no "${TARGET_USER}@${TARGET_HOST}" << EOF
     cd ${REMOTE_DIR}
     source venv/bin/activate
-    nohup python3 app.py --host 0.0.0.0 --port 5000 > app.log 2>&1 &
+    pkill -f "python3 app.py --port 5050" || true
+    nohup python3 app.py --host 0.0.0.0 --port 5050 > app.log 2>&1 &
     echo "Servicio iniciado correctamente PID: \$!"
 EOF
 
 echo "======================================================================"
 echo " ¡Despliegue Completado!"
-echo " Abre tu navegador en: http://${TARGET_HOST}:5000"
+echo " Abre tu navegador en: http://${TARGET_HOST}:5050"
 echo "======================================================================"

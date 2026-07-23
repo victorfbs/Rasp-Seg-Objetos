@@ -79,7 +79,7 @@ Para sincronizar y ejecutar el proyecto en la Raspberry Pi conectada en la red l
 3. **Acceder desde el navegador**:
    Una vez completado el despliegue, abre tu navegador en:
    ```text
-   http://192.168.1.75:5000
+   http://192.168.1.75:5050
    ```
 
 ---
