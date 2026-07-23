@@ -29,10 +29,27 @@ def handle_settings():
         return jsonify({"status": "success", "settings": tracker.get_settings()})
     return jsonify(tracker.get_settings())
 
+import json
+import numpy as np
+
+def safe_json_serialize(obj):
+    """Convierte de forma segura cualquier estructura con tipos de NumPy a dicts nativos."""
+    def default_converter(o):
+        if isinstance(o, (np.floating, float)):
+            return float(o)
+        if isinstance(o, (np.integer, int)):
+            return int(o)
+        if isinstance(o, np.ndarray):
+            return o.tolist()
+        if isinstance(o, np.bool_):
+            return bool(o)
+        return str(o)
+    return json.loads(json.dumps(obj, default=default_converter))
+
 @app.route('/api/status', methods=['GET'])
 def get_status():
     """Devuelve las métricas de seguimiento y estado de la red neuronal."""
-    return jsonify(tracker.get_status())
+    return jsonify(safe_json_serialize(tracker.get_status()))
 
 @app.route('/api/control', methods=['POST'])
 def handle_control():
