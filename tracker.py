@@ -58,20 +58,26 @@ class ObjectTracker:
 
     def _init_camera(self):
         try:
-            self.cap = cv2.VideoCapture(self.camera_index)
-            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-            
+            # Intentar abrir con backend V4L2 y fallback a CAP_ANY
+            self.cap = cv2.VideoCapture(self.camera_index, cv2.CAP_V4L2)
             if not self.cap.isOpened():
-                print(f"[WARN] No se detectó cámara en índice {self.camera_index}. MODO SIMULACIÓN activo.")
-                self.simulation_mode = True
-                self.status["simulation"] = True
-            else:
-                print(f"[INFO] Cámara OK en índice {self.camera_index}.")
-                self.simulation_mode = False
-                self.status["simulation"] = False
+                self.cap = cv2.VideoCapture(self.camera_index)
+                
+            if self.cap.isOpened():
+                self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                ret, frame = self.cap.read()
+                if ret and frame is not None:
+                    print(f"[INFO] Cámara en línea y capturando fotogramas en índice {self.camera_index}.")
+                    self.simulation_mode = False
+                    self.status["simulation"] = False
+                    return
+
+            print(f"[WARN] No se obtuvieron fotogramas de la cámara. MODO SIMULACIÓN activo.")
+            self.simulation_mode = True
+            self.status["simulation"] = True
         except Exception as e:
-            print(f"[ERROR] Error de cámara: {e}. MODO SIMULACIÓN activo.")
+            print(f"[ERROR] Error al inicializar la cámara: {e}. MODO SIMULACIÓN activo.")
             self.simulation_mode = True
             self.status["simulation"] = True
 
