@@ -58,7 +58,21 @@ class ObjectTracker:
 
     def _init_camera(self):
         try:
-            # Intentar abrir con backend V4L2 y fallback a CAP_ANY
+            # 1. Intentar conectar al stream HTTP compartido (ej. http://127.0.0.1:5000/video_feed)
+            stream_url = "http://127.0.0.1:5000/video_feed"
+            self.cap = cv2.VideoCapture(stream_url)
+            
+            if self.cap.isOpened():
+                ret, frame = self.cap.read()
+                if ret and frame is not None:
+                    print(f"[INFO] Conectado con éxito al stream de cámara compartido en {stream_url}.")
+                    self.simulation_mode = False
+                    self.status["simulation"] = False
+                    return
+                else:
+                    self.cap.release()
+
+            # 2. Fallback: Probar abrir directamente el dispositivo V4L2 local (/dev/video0)
             self.cap = cv2.VideoCapture(self.camera_index, cv2.CAP_V4L2)
             if not self.cap.isOpened():
                 self.cap = cv2.VideoCapture(self.camera_index)
@@ -68,16 +82,16 @@ class ObjectTracker:
                 self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
                 ret, frame = self.cap.read()
                 if ret and frame is not None:
-                    print(f"[INFO] Cámara en línea y capturando fotogramas en índice {self.camera_index}.")
+                    print(f"[INFO] Cámara V4L2 iniciada en índice {self.camera_index}.")
                     self.simulation_mode = False
                     self.status["simulation"] = False
                     return
 
-            print(f"[WARN] No se obtuvieron fotogramas de la cámara. MODO SIMULACIÓN activo.")
+            print(f"[WARN] No se pudo acceder ni al stream compartido ni a /dev/video0. MODO SIMULACIÓN activo.")
             self.simulation_mode = True
             self.status["simulation"] = True
         except Exception as e:
-            print(f"[ERROR] Error al inicializar la cámara: {e}. MODO SIMULACIÓN activo.")
+            print(f"[ERROR] Error al inicializar cámara: {e}. MODO SIMULACIÓN activo.")
             self.simulation_mode = True
             self.status["simulation"] = True
 
