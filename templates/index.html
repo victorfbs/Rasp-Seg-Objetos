@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raspberry Pi - Seguimiento de Objetos en Tiempo Real</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Encabezado Principal -->
+        <header class="app-header">
+            <div class="brand">
+                <div class="brand-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="22" y1="12" x2="18" y2="12"/>
+                        <line x1="6" y1="12" x2="2" y2="12"/>
+                        <line x1="12" y1="6" x2="12" y2="2"/>
+                        <line x1="12" y1="22" x2="12" y2="18"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1>Raspberry Tracker</h1>
+                    <p class="subtitle">Sistema de Seguimiento de Objetos en Tiempo Real</p>
+                </div>
+            </div>
+            
+            <div class="system-status">
+                <div class="status-badge" id="connection-badge">
+                    <span class="status-dot"></span>
+                    <span id="connection-text">Conectando...</span>
+                </div>
+                <div class="status-badge mode-badge" id="mode-badge">
+                    <span id="mode-text">Hardware Cap</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Contenido Principal Grid -->
+        <main class="dashboard-grid">
+            
+            <!-- Panel Izquierdo: Video Stream y Telemetría -->
+            <section class="viewport-section card">
+                <div class="card-header">
+                    <h2>Transmisión en Directo</h2>
+                    <div class="stream-controls">
+                        <button class="btn btn-sm btn-outline" id="btn-toggle-mask">
+                            <span id="mask-btn-text">Ver Máscara HSV</span>
+                        </button>
+                        <button class="btn btn-sm btn-primary" id="btn-toggle-tracking">
+                            <span id="tracking-btn-text">Pausar Seguimiento</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="video-wrapper">
+                    <img id="video-stream" src="{{ url_for('video_feed') }}" alt="Stream de Vídeo en Vivo">
+                    <div class="hud-overlay">
+                        <div class="hud-crosshair"></div>
+                        <div class="hud-metrics">
+                            <span id="hud-fps">FPS: 0.0</span>
+                            <span id="hud-res">640x480</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Métricas de Telemetría -->
+                <div class="telemetry-grid">
+                    <div class="metric-card">
+                        <span class="metric-label">Estado</span>
+                        <span class="metric-value" id="metric-detected">Buscando...</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Centroide (X, Y)</span>
+                        <span class="metric-value" id="metric-coords">[0, 0]</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Área (px)</span>
+                        <span class="metric-value" id="metric-area">0</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">Caja Delimitadora</span>
+                        <span class="metric-value" id="metric-bbox">0 x 0</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Panel Derecho: Ajustes y Calibración HSV -->
+            <section class="controls-section card">
+                <div class="card-header">
+                    <h2>Calibración de Color HSV</h2>
+                    <button class="btn btn-sm btn-icon" id="btn-reset" title="Restablecer valores">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                            <path d="M3 3v5h5"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Presets Rápidos -->
+                <div class="presets-container">
+                    <span class="preset-label">Preajustes:</span>
+                    <button class="preset-chip" data-preset="verde">Verde</button>
+                    <button class="preset-chip" data-preset="azul">Azul</button>
+                    <button class="preset-chip" data-preset="rojo">Rojo</button>
+                    <button class="preset-chip" data-preset="amarillo">Amarillo</button>
+                </div>
+
+                <!-- Sliders HSV -->
+                <div class="sliders-container">
+                    <!-- HUE -->
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <label for="h_min">Hue Mínimo (H-Min)</label>
+                            <span class="slider-value" id="val-h_min">35</span>
+                        </div>
+                        <input type="range" id="h_min" min="0" max="179" value="35" class="slider hue-slider">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <label for="h_max">Hue Máximo (H-Max)</label>
+                            <span class="slider-value" id="val-h_max">85</span>
+                        </div>
+                        <input type="range" id="h_max" min="0" max="179" value="85" class="slider hue-slider">
+                    </div>
+
+                    <!-- SATURATION -->
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <label for="s_min">Saturación Mínima (S-Min)</label>
+                            <span class="slider-value" id="val-s_min">80</span>
+                        </div>
+                        <input type="range" id="s_min" min="0" max="255" value="80" class="slider sat-slider">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <label for="s_max">Saturación Máxima (S-Max)</label>
+                            <span class="slider-value" id="val-s_max">255</span>
+                        </div>
+                        <input type="range" id="s_max" min="0" max="255" value="255" class="slider sat-slider">
+                    </div>
+
+                    <!-- VALUE / BRIGHTNESS -->
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <label for="v_min">Brillo Mínimo (V-Min)</label>
+                            <span class="slider-value" id="val-v_min">80</span>
+                        </div>
+                        <input type="range" id="v_min" min="0" max="255" value="80" class="slider val-slider">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <label for="v_max">Brillo Máximo (V-Max)</label>
+                            <span class="slider-value" id="val-v_max">255</span>
+                        </div>
+                        <input type="range" id="v_max" min="0" max="255" value="255" class="slider val-slider">
+                    </div>
+
+                    <!-- FILTRO DE ÁREA -->
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <label for="min_area">Área Mínima del Objeto (px²)</label>
+                            <span class="slider-value" id="val-min_area">500</span>
+                        </div>
+                        <input type="range" id="min_area" min="100" max="10000" step="100" value="500" class="slider">
+                    </div>
+                </div>
+
+                <!-- Toggles de Superposición Visual -->
+                <div class="toggles-container">
+                    <label class="toggle-control">
+                        <input type="checkbox" id="draw_box" checked>
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-text">Caja Delimitadora</span>
+                    </label>
+                    <label class="toggle-control">
+                        <input type="checkbox" id="draw_centroid" checked>
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-text">Centroide y Cruz</span>
+                    </label>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
