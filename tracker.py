@@ -2,7 +2,17 @@ import cv2
 import numpy as np
 import time
 import threading
-from nn_tracker import NeuralNetworkTracker
+def sanitize_for_json(obj):
+    """Sanitiza recursivamente tipos numéricos de NumPy (float32, int64, ndarray) a tipos nativos de Python."""
+    if isinstance(obj, dict):
+        return {k: sanitize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [sanitize_for_json(v) for v in obj]
+    elif isinstance(obj, np.generic):
+        return obj.item()
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    return obj
 
 class ObjectTracker:
     def __init__(self, camera_index=0):
@@ -109,18 +119,6 @@ class ObjectTracker:
                         self.mode = str(val)
                     else:
                         self.settings[key] = int(val)
-
-def sanitize_for_json(obj):
-    """Sanitiza recursivamente tipos numéricos de NumPy (float32, int64, ndarray) a tipos nativos de Python."""
-    if isinstance(obj, dict):
-        return {k: sanitize_for_json(v) for k, v in obj.items()}
-    elif isinstance(obj, (list, tuple)):
-        return [sanitize_for_json(v) for v in obj]
-    elif isinstance(obj, np.generic):
-        return obj.item()
-    elif isinstance(obj, np.ndarray):
-        return obj.tolist()
-    return obj
 
     def get_settings(self):
         with self.lock:
