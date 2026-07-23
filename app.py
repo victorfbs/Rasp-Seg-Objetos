@@ -17,8 +17,12 @@ def index():
 @app.route('/video_feed')
 def video_feed():
     """Streaming de vídeo MJPEG en directo."""
-    return Response(tracker.generate_mjpeg_stream(),
+    resp = Response(tracker.generate_mjpeg_stream(),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
+    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, pre-check=0, post-check=0, max-age=0'
+    resp.headers['Pragma'] = 'no-cache'
+    resp.headers['Expires'] = '0'
+    return resp
 
 @app.route('/api/settings', methods=['GET', 'POST'])
 def handle_settings():

@@ -3,8 +3,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const sliderIds = ['h_min', 'h_max', 's_min', 's_max', 'v_min', 'v_max', 'min_area'];
     const toggleIds = ['draw_box', 'draw_centroid'];
     
+    const videoStream = document.getElementById('video-stream');
+    const btnReloadStream = document.getElementById('btn-reload-stream');
     const btnToggleTracking = document.getElementById('btn-toggle-tracking');
     const trackingBtnText = document.getElementById('tracking-btn-text');
+
+    function reloadVideoStream() {
+        if (videoStream) {
+            videoStream.src = '/video_feed?t=' + new Date().getTime();
+        }
+    }
+
+    if (btnReloadStream) {
+        btnReloadStream.addEventListener('click', reloadVideoStream);
+    }
+
+    if (videoStream) {
+        videoStream.addEventListener('error', () => {
+            console.warn('Error en stream de vídeo. Reconectando en 1s...');
+            setTimeout(reloadVideoStream, 1000);
+        });
+    }
     const btnToggleMask = document.getElementById('btn-toggle-mask');
     const maskBtnText = document.getElementById('mask-btn-text');
     const btnReset = document.getElementById('btn-reset');
