@@ -256,16 +256,16 @@ class ObjectTracker:
                         cv2.line(frame, (target_x - 12, target_y), (target_x + 12, target_y), (0, 0, 255), 2)
                         cv2.line(frame, (target_x, target_y - 12), (target_x, target_y + 12), (0, 0, 255), 2)
 
-        # Actualizar telemetría
+        # Actualizar telemetría con tipos nativos serializables en JSON
         with self.lock:
-            self.status["fps"] = round(self._fps, 1)
-            self.status["detected"] = detected
-            self.status["target_x"] = target_x
-            self.status["target_y"] = target_y
-            self.status["target_area"] = target_area
-            self.status["bbox"] = bbox
-            self.status["tracking_mode"] = mode
-            self.status["nn_confidence"] = nn_conf
+            self.status["fps"] = float(round(self._fps, 1))
+            self.status["detected"] = bool(detected)
+            self.status["target_x"] = int(target_x)
+            self.status["target_y"] = int(target_y)
+            self.status["target_area"] = int(target_area)
+            self.status["bbox"] = [int(v) for v in bbox]
+            self.status["tracking_mode"] = str(mode)
+            self.status["nn_confidence"] = float(nn_conf)
 
         # HUD Overlay
         cv2.putText(frame, f"FPS: {round(self._fps, 1)}", (w - 120, 30),

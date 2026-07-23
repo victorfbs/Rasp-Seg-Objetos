@@ -5,7 +5,7 @@ import threading
 class NeuralNetworkTracker:
     """
     Clase de seguimiento por Red Neuronal / Aprendizaje Online optimizado con NumPy y OpenCV.
-    No requiere módulos C++ opcionales (cv2.ml), garantizando compatibilidad 100% en Raspberry Pi.
+    Garantiza compatibilidad 100% en Raspberry Pi y tipos serializables en JSON.
     """
     def __init__(self):
         self.lock = threading.Lock()
@@ -17,16 +17,10 @@ class NeuralNetworkTracker:
         self.sample_count = 0
         self.patch_size = (32, 32)
 
-        # Matriz de pesos/características entrenada
         self.W_pos = None
         self.W_neg = None
 
     def extract_features(self, patch):
-        """
-        Extrae un vector de incrustación (embedding) denso:
-        - Histograma HSV (H:16, S:8, V:8)
-        - Vector de intensidad espacial escalado
-        """
         resized = cv2.resize(patch, self.patch_size)
         hsv = cv2.cvtColor(resized, cv2.COLOR_BGR2HSV)
         
@@ -48,7 +42,6 @@ class NeuralNetworkTracker:
             gray_flat
         ]).astype(np.float32)
         
-        # Normalización L2 del vector de incrustación
         norm = np.linalg.norm(feature_vec)
         if norm > 0:
             feature_vec = feature_vec / norm
@@ -69,12 +62,10 @@ class NeuralNetworkTracker:
             return False
         
         with self.lock:
-            # Muestra positiva
             feat_pos = self.extract_features(patch_pos)
             self.samples.append(feat_pos)
             self.labels.append(1)
             
-            # Muestras negativas aleatorias del fondo
             for _ in range(3):
                 rx = np.random.randint(0, max(1, img_w - 40))
                 ry = np.random.randint(0, max(1, img_h - 40))
@@ -96,7 +87,6 @@ class NeuralNetworkTracker:
             if len(pos_feats) < 1:
                 return False, "Captura al menos 1 muestra del objeto antes de entrenar."
             
-            # Matriz promedio de prototipo de objeto
             self.W_pos = np.mean(pos_feats, axis=0)
             norm_pos = np.linalg.norm(self.W_pos)
             if norm_pos > 0:
@@ -111,7 +101,7 @@ class NeuralNetworkTracker:
                 self.W_neg = np.zeros_like(self.W_pos)
 
             self.is_trained = True
-            self.accuracy = round(min(99.0, 88.0 + len(pos_feats) * 1.5), 1)
+            self.accuracy = float(round(min(99.0, 88.0 + len(pos_feats) * 1.5), 1))
             return True, f"Red Neuronal entrenada con éxito ({len(pos_feats)} muestras de objeto)."
 
     def detect(self, frame):
@@ -125,28 +115,26 @@ class NeuralNetworkTracker:
         best_score = -1.0
         best_bbox = [0, 0, 0, 0]
         
-        # Deslizar ventanas sobre la imagen
         for y in range(0, img_h - window_size, step):
             for x in range(0, img_w - window_size, step):
                 patch = frame[y:y+window_size, x:x+window_size]
                 feat = self.extract_features(patch)
                 
-                # Similitud coseno con la neurona prototipo positiva vs negativa
-                sim_pos = np.dot(self.W_pos, feat)
-                sim_neg = np.dot(self.W_neg, feat) if self.W_neg is not None else 0.0
+                sim_pos = float(np.dot(self.W_pos, feat))
+                sim_neg = float(np.dot(self.W_neg, feat)) if self.W_neg is not None else 0.0
                 
                 score = sim_pos - 0.5 * sim_neg
                 
                 if score > best_score:
                     best_score = score
-                    best_bbox = [x, y, window_size, window_size]
+                    best_bbox = [int(x), int(y), int(window_size), int(window_size)]
         
         if best_score > 0.45:
             bx, by, bw, bh = best_bbox
-            cx = bx + bw // 2
-            cy = by + bh // 2
-            area = bw * bh
-            conf_percentage = round(min(99.9, max(50.0, best_score * 100.0)), 1)
+            cx = int(bx + bw // 2)
+            cy = int(by + bh // 2)
+            area = int(bw * bh)
+            conf_percentage = float(round(min(99.9, max(50.0, best_score * 100.0)), 1))
             return True, cx, cy, area, best_bbox, conf_percentage
         
         return False, 0, 0, 0, [0, 0, 0, 0], 0.0
@@ -164,8 +152,8 @@ class NeuralNetworkTracker:
     def get_status(self):
         with self.lock:
             return {
-                "is_trained": self.is_trained,
-                "sample_count": self.sample_count,
-                "total_vectors": len(self.samples),
-                "accuracy": self.accuracy
+                "is_trained": bool(self.is_trained),
+                "sample_count": int(self.sample_count),
+                "total_vectors": int(len(self.samples)),
+                "accuracy": float(self.accuracy)
             }
