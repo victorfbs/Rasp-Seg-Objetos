@@ -107,15 +107,27 @@ class ObjectTracker:
                     else:
                         self.settings[key] = int(val)
 
+def sanitize_for_json(obj):
+    """Sanitiza recursivamente tipos numéricos de NumPy (float32, int64, ndarray) a tipos nativos de Python."""
+    if isinstance(obj, dict):
+        return {k: sanitize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [sanitize_for_json(v) for v in obj]
+    elif isinstance(obj, np.generic):
+        return obj.item()
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    return obj
+
     def get_settings(self):
         with self.lock:
-            return self.settings.copy()
+            return sanitize_for_json(self.settings)
 
     def get_status(self):
         with self.lock:
             st = self.status.copy()
             st["nn_info"] = self.nn_tracker.get_status()
-            return st
+            return sanitize_for_json(st)
 
     def capture_nn_sample(self):
         """Captura el área del objetivo actual como muestra para entrenar la Red Neuronal."""
