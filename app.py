@@ -32,20 +32,22 @@ def handle_settings():
 import json
 import numpy as np
 
-def safe_json_serialize(obj):
-    """Convierte de forma universal cualquier tipo de NumPy a tipos nativos de Python."""
+def safe_json_response(data_dict, status_code=200):
+    """Devuelve una respuesta JSON directa con codificación robusta de tipos numéricos de NumPy."""
     def default_converter(o):
         if hasattr(o, 'item') and callable(o.item):
             return o.item()
         if hasattr(o, 'tolist') and callable(o.tolist):
             return o.tolist()
         return str(o)
-    return json.loads(json.dumps(obj, default=default_converter))
+    
+    json_str = json.dumps(data_dict, default=default_converter)
+    return Response(json_str, status=status_code, mimetype='application/json')
 
 @app.route('/api/status', methods=['GET'])
 def get_status():
     """Devuelve las métricas de seguimiento y estado de la red neuronal."""
-    return jsonify(safe_json_serialize(tracker.get_status()))
+    return safe_json_response(tracker.get_status())
 
 @app.route('/api/control', methods=['POST'])
 def handle_control():
