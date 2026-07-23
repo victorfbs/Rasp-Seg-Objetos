@@ -35,8 +35,9 @@ EOF
 echo "[3/3] Iniciando el servicio en http://${TARGET_HOST}:5050 ..."
 ssh -o StrictHostKeyChecking=no "${TARGET_USER}@${TARGET_HOST}" << EOF
     cd ${REMOTE_DIR}
+    rm -rf __pycache__ */__pycache__
+    fuser -k 5050/tcp || pkill -9 -f "python3 app.py" || true
     source venv/bin/activate
-    pkill -f "python3 app.py --port 5050" || true
     nohup python3 app.py --host 0.0.0.0 --port 5050 > app.log 2>&1 &
     echo "Servicio iniciado correctamente PID: \$!"
 EOF

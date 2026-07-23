@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import time
 import threading
+from nn_tracker import NeuralNetworkTracker
 def sanitize_for_json(obj):
     """Sanitiza recursivamente tipos numéricos de NumPy (float32, int64, ndarray) a tipos nativos de Python."""
     if isinstance(obj, dict):
