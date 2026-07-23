@@ -33,16 +33,12 @@ import json
 import numpy as np
 
 def safe_json_serialize(obj):
-    """Convierte de forma segura cualquier estructura con tipos de NumPy a dicts nativos."""
+    """Convierte de forma universal cualquier tipo de NumPy a tipos nativos de Python."""
     def default_converter(o):
-        if isinstance(o, (np.floating, float)):
-            return float(o)
-        if isinstance(o, (np.integer, int)):
-            return int(o)
-        if isinstance(o, np.ndarray):
+        if hasattr(o, 'item') and callable(o.item):
+            return o.item()
+        if hasattr(o, 'tolist') and callable(o.tolist):
             return o.tolist()
-        if isinstance(o, np.bool_):
-            return bool(o)
         return str(o)
     return json.loads(json.dumps(obj, default=default_converter))
 
